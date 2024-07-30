@@ -8,14 +8,14 @@ codeunit 50000 "BH Transportation Costs Mgt."
         TransportationCosts: Decimal;
         TransportUnitFilter: Text;
     begin
-        SalesReceivablesSetup.Get();
-        SalesReceivablesSetup.TestField("BH Transp. Costs Limit");
-        SalesReceivablesSetup.TestField("BH Transp. Costs It Charge No.");
         SetSalesLineItemFilter(SalesHeader, SalesLine);
         if SalesLine.IsEmpty then
             exit;
-        SalesLine.CalcSums("Unit Price");
-        if SalesLine."Unit Price" > SalesReceivablesSetup."BH Transp. Costs Limit" then
+        SalesReceivablesSetup.Get();
+        SalesReceivablesSetup.TestField("BH Transp. Costs Limit");
+        SalesReceivablesSetup.TestField("BH Transp. Costs It Charge No.");
+        SalesLine.CalcSums("Line Amount");
+        if SalesLine."Line Amount" > SalesReceivablesSetup."BH Transp. Costs Limit" then
             exit;
         GetTransportUnitFilter(SalesHeader, TransportUnitFilter);
         BHTransportationCosts.SetCurrentKey(Price);
@@ -32,16 +32,14 @@ codeunit 50000 "BH Transportation Costs Mgt."
     begin
         TransportUnitFilter := '';
         SetSalesLineItemFilter(SalesHeader, SalesLine);
-        if SalesLine.IsEmpty then
-            exit;
         SalesLine.SetLoadFields("BH Transport Unit");
-        SalesLine.FindSet();
-        repeat
-            if TransportUnitFilter = '' then
-                TransportUnitFilter := SalesLine."BH Transport Unit"
-            else
-                TransportUnitFilter += '|' + SalesLine."BH Transport Unit";
-        until SalesLine.Next() = 0;
+        if SalesLine.FindSet() then
+            repeat
+                if TransportUnitFilter = '' then
+                    TransportUnitFilter := SalesLine."BH Transport Unit"
+                else
+                    TransportUnitFilter += '|' + SalesLine."BH Transport Unit";
+            until SalesLine.Next() = 0;
     end;
 
     local procedure SetSalesLineItemFilter(SalesHeader: Record "Sales Header"; var SalesLine: Record "Sales Line")
@@ -49,6 +47,7 @@ codeunit 50000 "BH Transportation Costs Mgt."
         SalesLine.SetRange("Document Type", SalesHeader."Document Type");
         SalesLine.SetRange("Document No.", SalesHeader."No.");
         SalesLine.SetRange(Type, SalesLine.Type::Item);
+        SalesLine.SetFilter("No.", '<>%1', '');
     end;
 
     local procedure CreateTransportCostSalesLine(SalesHeader: Record "Sales Header"; TransportationCosts: Decimal; TranspCostsItemChargeNo: Code[20])
